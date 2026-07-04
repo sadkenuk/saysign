@@ -1,0 +1,45 @@
+name: Deploy Say & Sign
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ship the build context to the server. node_modules/dist are not
+      # committed, so the checkout is already clean; deploy.sh builds the
+      # image on the server from these files.
+      - name: Copy app to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "Dockerfile,nginx.conf,package.json,package-lock.json,index.html,vite.config.js,tailwind.config.js,postcss.config.js,app.yml,src,public"
+          target: "~/apps/say-and-sign"
+          overwrite: true
+
+      # The server-side deploy.sh builds the image, provisions DNS + a TLS
+      # cert, writes the reverse-proxy config, and starts the container.
+      # Point HOMESERVER_DIR at wherever that script lives on your server.
+      - name: Build & start on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            # Keep deploy.sh output out of the (public) Actions log — it
+            # prints the app's URL. Log only a generic status.
+            if "${HOMESERVER_DIR:-$HOME/homeserver}/deploy.sh" ~/apps/say-and-sign > /tmp/deploy-say-and-sign.log 2>&1; then
+              echo "✓ Deploy complete"
+            else
+              echo "✗ Deploy failed — check the deploy log on the server" >&2
+              exit 1
+            fi

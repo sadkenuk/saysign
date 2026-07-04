@@ -1,0 +1,11 @@
+# Portainer stack for a pre-built image (no build context needed).
+# Load the image onto the Docker host first — see README "Deploying
+# with Portainer" — or point Portainer's Repository option at this
+# repo and use docker-compose.yml instead, which builds from source.
+services:
+  say-and-sign:
+    image: say-and-sign:latest
+    container_name: say-and-sign
+    ports:
+      - "8080:80"
+    restart: unless-stopped

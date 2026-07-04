@@ -1,0 +1,8 @@
+services:
+  say-and-sign:
+    build: .
+    image: say-and-sign:latest
+    container_name: say-and-sign
+    ports:
+      - "8080:80"
+    restart: unless-stopped
